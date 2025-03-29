@@ -1,171 +1,75 @@
-extern crate serial;
-use serial::prelude::*;
+pub mod commands;
 
-extern crate crc16;
-#[macro_use]
-extern crate bitflags;
+use serial::prelude::*;
+use crc16;
+use bitflags::bitflags;
+use commands::Commands;
 
 bitflags! {
     pub struct ConfigFlags: u16 {
-    const RC_MODE = 0x0000;
-    const ANALOG_MODE = 0x0001;
-    const SIMPLE_SERIAL_MODE = 0x0002;
-    const PACKET_SERIAL_MODE = 0x0003;
-    const BATTERY_MODE_OFF = 0x0000;
-    const BATTERY_MODE_AUTO = 0x0004;
-    const BATTERY_MODE_2_CELL = 0x0008;
-    const BATTERY_MODE_3_CELL = 0x000C;
-    const BATTERY_MODE_4_CELL = 0x0010;
-    const BATTERY_MODE_5_CELL = 0x0014;
-    const BATTERY_MODE_6_CELL = 0x0018;
-    const BATTERY_MODE_7_CELL = 0x001C;
-    const MIXING = 0x0020;
-    const EXPONENTIAL = 0x0040;
-    const MCU = 0x0080;
-    const BAUDRATE_2400 = 0x0000;
-    const BAUDRATE_9600 = 0x0020;
-    const BAUDRATE_19200 = 0x0040;
-    const BAUDRATE_38400 = 0x0060;
-    const BAUDRATE_57600 = 0x0080;
-    const BAUDRATE_115200 = 0x00A0;
-    const BAUDRATE_230400 = 0x00C0;
-    const BAUDRATE_460800 = 0x00E0;
-    const FLIPSWITCH = 0x0100;
-    const PACKET_ADDRESS_0x80 = 0x0000;
-    const PACKET_ADDRESS_0x81 = 0x0100;
-    const PACKET_ADDRESS_0x82 = 0x0200;
-    const PACKET_ADDRESS_0x83 = 0x0300;
-    const PACKET_ADDRESS_0x84 = 0x0400;
-    const PACKET_ADDRESS_0x85 = 0x0500;
-    const PACKET_ADDRESS_0x86 = 0x0600;
-    const PACKET_ADDRESS_0x87 = 0x0700;
-    const SLAVE_MODE = 0x0800;
-    const RELAY_MODE = 0x1000;
-    const SWAP_ENCODERS = 0x2000;
-    const SWAP_BUTTONS = 0x4000;
-    const MULTI_UNIT_MODE = 0x8000;
+        const RC_MODE = 0x0000;
+        const ANALOG_MODE = 0x0001;
+        const SIMPLE_SERIAL_MODE = 0x0002;
+        const PACKET_SERIAL_MODE = 0x0003;
+        const BATTERY_MODE_OFF = 0x0000;
+        const BATTERY_MODE_AUTO = 0x0004;
+        const BATTERY_MODE_2_CELL = 0x0008;
+        const BATTERY_MODE_3_CELL = 0x000C;
+        const BATTERY_MODE_4_CELL = 0x0010;
+        const BATTERY_MODE_5_CELL = 0x0014;
+        const BATTERY_MODE_6_CELL = 0x0018;
+        const BATTERY_MODE_7_CELL = 0x001C;
+        const MIXING = 0x0020;
+        const EXPONENTIAL = 0x0040;
+        const MCU = 0x0080;
+        const BAUDRATE_2400 = 0x0000;
+        const BAUDRATE_9600 = 0x0020;
+        const BAUDRATE_19200 = 0x0040;
+        const BAUDRATE_38400 = 0x0060;
+        const BAUDRATE_57600 = 0x0080;
+        const BAUDRATE_115200 = 0x00A0;
+        const BAUDRATE_230400 = 0x00C0;
+        const BAUDRATE_460800 = 0x00E0;
+        const FLIPSWITCH = 0x0100;
+        const PACKET_ADDRESS_0X80 = 0x0000;
+        const PACKET_ADDRESS_0X81 = 0x0100;
+        const PACKET_ADDRESS_0X82 = 0x0200;
+        const PACKET_ADDRESS_0X83 = 0x0300;
+        const PACKET_ADDRESS_0X84 = 0x0400;
+        const PACKET_ADDRESS_0X85 = 0x0500;
+        const PACKET_ADDRESS_0X86 = 0x0600;
+        const PACKET_ADDRESS_0X87 = 0x0700;
+        const SLAVE_MODE = 0x0800;
+        const RELAY_MODE = 0x1000;
+        const SWAP_ENCODERS = 0x2000;
+        const SWAP_BUTTONS = 0x4000;
+        const MULTI_UNIT_MODE = 0x8000;
     }
 }
 
 bitflags! {
     pub struct StatusFlags: u16 {
-    const NORMAL = 0x0000;
-    const M1_OVERCURRENT_WARNING = 0x0001;
-    const M2_OVERCURRENT_WARNING = 0x0002;
-    const E_STOP = 0x0004;
-    const TEMPERATURE_ERROR = 0x0008;
-    const TEMPERATURE2_ERROR = 0x0010;
-    const MAIN_BATTERY_HIGH_ERROR = 0x0020;
-    const LOGIC_BATTERY_HIGH_ERROR = 0x0040;
-    const LOGIC_BATTERY_LOW_ERROR = 0x0080;
-    const M1_DRIVER_FAULT = 0x0100;
-    const M2_DRIVER_FAULT = 0x0200;
-    const MAIN_BATTERY_HIGH_WARNING = 0x0400;
-    const MAIN_BATTERY_LOW_WARNING = 0x0800;
-    const TERMPERATURE_WARNING = 0x1000;
-    const TEMPERATURE2_WARNING = 0x2000;
-    const M1_HOME = 0x4000;
-    const M2_HOME = 0x8000;
+        const NORMAL = 0x0000;
+        const M1_OVERCURRENT_WARNING = 0x0001;
+        const M2_OVERCURRENT_WARNING = 0x0002;
+        const E_STOP = 0x0004;
+        const TEMPERATURE_ERROR = 0x0008;
+        const TEMPERATURE2_ERROR = 0x0010;
+        const MAIN_BATTERY_HIGH_ERROR = 0x0020;
+        const LOGIC_BATTERY_HIGH_ERROR = 0x0040;
+        const LOGIC_BATTERY_LOW_ERROR = 0x0080;
+        const M1_DRIVER_FAULT = 0x0100;
+        const M2_DRIVER_FAULT = 0x0200;
+        const MAIN_BATTERY_HIGH_WARNING = 0x0400;
+        const MAIN_BATTERY_LOW_WARNING = 0x0800;
+        const TERMPERATURE_WARNING = 0x1000;
+        const TEMPERATURE2_WARNING = 0x2000;
+        const M1_HOME = 0x4000;
+        const M2_HOME = 0x8000;
     }
 }
 
 const ADDRESS: u8 = 0x80;
-
-#[repr(u8)]
-enum Command {
-    M1FORWARD = 0,
-    M1BACKWARD = 1,
-    SETMINMB = 2,
-    SETMAXMB = 3,
-    M2FORWARD = 4,
-    M2BACKWARD = 5,
-    M17BIT = 6,
-    M27BIT = 7,
-    MIXEDFORWARD = 8,
-    MIXEDBACKWARD = 9,
-    MIXEDRIGHT = 10,
-    MIXEDLEFT = 11,
-    MIXEDFB = 12,
-    MIXEDLR = 13,
-    GETM1ENC = 16,
-    GETM2ENC = 17,
-    GETM1SPEED = 18,
-    GETM2SPEED = 19,
-    RESETENC = 20,
-    GETVERSION = 21,
-    SETM1ENCCOUNT = 22,
-    SETM2ENCCOUNT = 23,
-    GETMBATT = 24,
-    GETLBATT = 25,
-    SETMINLB = 26,
-    SETMAXLB = 27,
-    SETM1PID = 28,
-    SETM2PID = 29,
-    GETM1ISPEED = 30,
-    GETM2ISPEED = 31,
-    M1DUTY = 32,
-    M2DUTY = 33,
-    MIXEDDUTY = 34,
-    M1SPEED = 35,
-    M2SPEED = 36,
-    MIXEDSPEED = 37,
-    M1SPEEDACCEL = 38,
-    M2SPEEDACCEL = 39,
-    MIXEDSPEEDACCEL = 40,
-    M1SPEEDDIST = 41,
-    M2SPEEDDIST = 42,
-    MIXEDSPEEDDIST = 43,
-    M1SPEEDACCELDIST = 44,
-    M2SPEEDACCELDIST = 45,
-    MIXEDSPEEDACCELDIST = 46,
-    GETBUFFERS = 47,
-    GETPWMS = 48,
-    GETCURRENTS = 49,
-    MIXEDSPEED2ACCEL = 50,
-    MIXEDSPEED2ACCELDIST = 51,
-    M1DUTYACCEL = 52,
-    M2DUTYACCEL = 53,
-    MIXEDDUTYACCEL = 54,
-    READM1PID = 55,
-    READM2PID = 56,
-    SETMAINVOLTAGES = 57,
-    SETLOGICVOLTAGES = 58,
-    GETMINMAXMAINVOLTAGES = 59,
-    GETMINMAXLOGICVOLTAGES = 60,
-    SETM1POSPID = 61,
-    SETM2POSPID = 62,
-    READM1POSPID = 63,
-    READM2POSPID = 64,
-    M1SPEEDACCELDECCELPOS = 65,
-    M2SPEEDACCELDECCELPOS = 66,
-    MIXEDSPEEDACCELDECCELPOS = 67,
-    SETM1DEFAULTACCEL = 68,
-    SETM2DEFAULTACCEL = 69,
-    SETPINFUNCTIONS = 74,
-    GETPINFUNCTIONS = 75,
-    SETDEADBAND = 76,
-    GETDEADBAND = 77,
-    GETENCODERS = 78,
-    GETISPEEDS = 79,
-    RESTOREDEFAULTS = 80,
-    GETTEMP = 82,
-    GETTEMP2 = 83, //Only valid on some models
-    GETERROR = 90,
-    GETENCODERMODE = 91,
-    SETM1ENCODERMODE = 92,
-    SETM2ENCODERMODE = 93,
-    WRITENVM = 94,
-    READNVM = 95, //Reloads values from Flash into Ram
-    SETCONFIG = 98,
-    GETCONFIG = 99,
-    SETM1MAXCURRENT = 133,
-    SETM2MAXCURRENT = 134,
-    GETM1MAXCURRENT = 135,
-    GETM2MAXCURRENT = 136,
-    SETPWMMODE = 148,
-    GETPWMMODE = 149,
-    FLAGBOOTLOADER = 255, //Only available via USB communications
-}
 
 #[derive(PartialEq, Debug)]
 pub enum BufferStatus {
@@ -265,59 +169,59 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
     }
 
     pub fn forward_m1(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Command::M1FORWARD as u8, &vec![speed])
+        self.write_command(Commands::M1Forward as u8, &vec![speed])
     }
 
     pub fn backward_m1(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Command::M1BACKWARD as u8, &vec![speed])
+        self.write_command(Commands::M1Backward as u8, &vec![speed])
     }
 
-    pub fn set_min_voltage_main_battery(voltage: u8) {
+    pub fn set_min_voltage_main_battery(_voltage: u8) {
         unimplemented!()
     }
 
-    pub fn set_max_voltage_main_battery(voltage: u8) {
+    pub fn set_max_voltage_main_battery(_voltage: u8) {
         unimplemented!()
     }
 
     pub fn forward_m2(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Command::M2FORWARD as u8, &vec![speed])
+        self.write_command(Commands::M2Forward as u8, &vec![speed])
     }
 
     pub fn backward_m2(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Command::M2BACKWARD as u8, &vec![speed])
+        self.write_command(Commands::M2Backward as u8, &vec![speed])
     }
 
     pub fn forward_backward_m1(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Command::M17BIT as u8, &vec![speed])
+        self.write_command(Commands::M1Drive as u8, &vec![speed])
     }
 
     pub fn forward_backward_m2(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Command::M27BIT as u8, &vec![speed])
+        self.write_command(Commands::M2Drive as u8, &vec![speed])
     }
 
     pub fn forward_mixed(&mut self, speed: u8) -> Result<(), std::io::Error> {
-        self.write_command(Command::MIXEDFORWARD as u8, &vec![speed])
+        self.write_command(Commands::MixDriveForward as u8, &vec![speed])
     }
 
     pub fn backward_mixed(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Command::MIXEDBACKWARD as u8, &vec![speed])
+        self.write_command(Commands::MixDriveBackward as u8, &vec![speed])
     }
 
     pub fn turn_right_mixed(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Command::MIXEDRIGHT as u8, &vec![speed])
+        self.write_command(Commands::MixTurnRight as u8, &vec![speed])
     }
 
     pub fn turn_left_mixed(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Command::MIXEDLEFT as u8, &vec![speed])
+        self.write_command(Commands::MixTurnLeft as u8, &vec![speed])
     }
 
     pub fn forward_backward_mixed(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Command::MIXEDFB as u8, &vec![speed])
+        self.write_command(Commands::MixDrive as u8, &vec![speed])
     }
 
     pub fn left_right_mixed(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Command::MIXEDLR as u8, &vec![speed])
+        self.write_command(Commands::TurnLeftRight as u8, &vec![speed])
     }
 
     //uint32_t ReadEncM1(uint8_t address, uint8_t *status=NULL,bool *valid=NULL);
@@ -331,12 +235,12 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
     }
 
     //bool SetEncM1(uint8_t address, int32_t val);
-    pub fn set_enc_m1(&mut self, value: i32) -> Result<(), &str> {
+    pub fn set_enc_m1(&mut self, _value: i32) -> Result<(), &str> {
         unimplemented!()
     }
 
     //bool SetEncM2(uint8_t address, int32_t val);
-    pub fn set_enc_m2(&mut self, value: i32) -> Result<(), &str> {
+    pub fn set_enc_m2(&mut self, _value: i32) -> Result<(), &str> {
         unimplemented!()
     }
 
@@ -346,7 +250,7 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
     */
     //bool ResetEncoders(uint8_t address);
     pub fn reset_encoders(&mut self) -> Result<(), std::io::Error> {
-        self.write_simple_command(Command::RESETENC as u8)
+        self.write_simple_command(Commands::ResetEncoders as u8)
     }
 
     /*
@@ -355,13 +259,13 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
 
     //uint16_t ReadMainBatteryVoltage(uint8_t address,bool *valid=NULL);
     pub fn read_main_battery_voltage(&mut self) -> Result<f32, std::io::Error> {
-        self.read_command(Command::GETMBATT as u8, 2)
+        self.read_command(Commands::ReadMainBatVoltage as u8, 2)
             .map(|data| (join_u8(data[0], data[1]) as f32) / 10.0)
     }
 
     //uint16_t ReadLogicBatteryVoltage(uint8_t address,bool *valid=NULL);
     pub fn read_logic_battery_voltage(&mut self) -> Result<f32, std::io::Error> {
-        self.read_command(Command::GETLBATT as u8, 2)
+        self.read_command(Commands::ReadLogicBatVoltage as u8, 2)
             .map(|data| (join_u8(data[0], data[1]) as f32) / 10.0)
     }
 
@@ -376,18 +280,18 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
 
     //bool DutyM1(uint8_t address, uint16_t duty);
     pub fn duty_m1(&mut self, duty: i16) -> std::io::Result<()> {
-        self.write_command(Command::M1DUTY as u8, &split_i16_u8(duty).to_vec())
+        self.write_command(Commands::M1DriveSignedDutyCycle as u8, &split_i16_u8(duty).to_vec())
     }
 
     //bool DutyM2(uint8_t address, uint16_t duty);
     pub fn duty_m2(&mut self, duty: i16) -> std::io::Result<()> {
-        self.write_command(Command::M2DUTY as u8, &split_i16_u8(duty).to_vec())
+        self.write_command(Commands::M2DriveSignedDutyCycle as u8, &split_i16_u8(duty).to_vec())
     }
 
     //bool DutyM1M2(uint8_t address, uint16_t duty1, uint16_t duty2);
     pub fn duty_m1_m2(&mut self, duty1: i16, duty2: i16) -> std::io::Result<()> {
         self.write_command(
-            Command::MIXEDDUTY as u8,
+            Commands::MixDriveSignedDutyCycle as u8,
             &[&split_i16_u8(duty1)[..], &split_i16_u8(duty2)[..]].concat(),
         )
     }
@@ -403,7 +307,7 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
         let speed_1_bytes = split_i32_u8(speed_1);
         let speed_2_bytes = split_i32_u8(speed_2);
         let data = [&speed_1_bytes[..], &speed_2_bytes[..]].concat();
-        self.write_command(Command::MIXEDSPEED as u8, &data)
+        self.write_command(Commands::MixDriveSignedSpeed as u8, &data)
     }
     /*
     bool SpeedAccelM1(uint8_t address, uint32_t accel, uint32_t speed);
@@ -415,7 +319,7 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
         let speed_bytes = split_i32_u8(speed);
         let distance_bytes = split_u32_u8(distance);
         let data = [&speed_bytes[..], &distance_bytes[..], &vec![1u8]].concat();
-        self.write_command(Command::M1SPEEDDIST as u8, &data)
+        self.write_command(Commands::M1DriveSignedSpeedDistanceBuffered as u8, &data)
     }
 
 
@@ -424,7 +328,7 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
         let speed_bytes = split_i32_u8(speed);
         let distance_bytes = split_u32_u8(distance);
         let data = [&speed_bytes[..], &distance_bytes[..], &vec![1u8]].concat();
-        self.write_command(Command::M2SPEEDDIST as u8, &data)
+        self.write_command(Commands::M2DriveSignedSpeedDistanceBuffered as u8, &data)
     }
 
     //bool SpeedDistanceM1M2(uint8_t address, uint32_t speed1, uint32_t distance1, uint32_t speed2, uint32_t distance2, uint8_t flag=0);
@@ -434,7 +338,7 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
         let speed_2_bytes = split_i32_u8(speed_2);
         let distance_2_bytes = split_u32_u8(distance_2);
         let data = [&speed_1_bytes[..], &distance_1_bytes[..], &speed_2_bytes[..], &distance_2_bytes[..], &vec![1u8]].concat();
-        self.write_command(Command::MIXEDSPEEDDIST as u8, &data)
+        self.write_command(Commands::MixDriveSignedSpeedDistanceBuffered as u8, &data)
     }
 
     /*
@@ -450,19 +354,19 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
         let speed_2_bytes = split_i32_u8(speed_2);
         let distance_2_bytes = split_u32_u8(distance_2);
         let data = [&accel_bytes[..], &speed_1_bytes[..], &distance_1_bytes[..], &speed_2_bytes[..], &distance_2_bytes[..], &vec![1u8]].concat();
-        self.write_command(Command::MIXEDSPEEDACCELDIST as u8, &data)
+        self.write_command(Commands::MixDriveSignedSpeedAccelDistanceBuffered as u8, &data)
     }
 
     //bool ReadBuffers(uint8_t address, uint8_t &depth1, uint8_t &depth2);
     pub fn read_buffers(&mut self) -> std::io::Result<(BufferStatus, BufferStatus)> {
-        self.read_command(Command::GETBUFFERS as u8, 2)
+        self.read_command(Commands::ReadBufferLength as u8, 2)
             .map(|data|
             (match data[0] {
                 0x0 => BufferStatus::LastCommandExecuting,
                 0x80 => BufferStatus::Empty,
                 num => BufferStatus::NotEmpty(num)
-            }
-            , match data[1] {
+            }, 
+            match data[1] {
                 0x0 => BufferStatus::LastCommandExecuting,
                 0x80 => BufferStatus::Empty,
                 num => BufferStatus::NotEmpty(num)
@@ -486,7 +390,7 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
     //bool ReadMinMaxMainVoltages(uint8_t address,uint16_t &min,uint16_t &max);
 
     pub fn read_min_max_main_voltages(&mut self) -> Result<(f32, f32), std::io::Error> {
-        self.read_command(Command::GETMINMAXMAINVOLTAGES as u8, 4)
+        self.read_command(Commands::ReadMainBatVoltageSettings as u8, 4)
             .map(|data| {
                 (
                     join_u8(data[0], data[1]) as f32 / 10.0,
@@ -522,7 +426,7 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
             &accel_1_bytes[..], &speed_1_bytes[..], &deccel_1_bytes[..], &position_1_bytes[..],
             &accel_2_bytes[..], &speed_2_bytes[..], &deccel_2_bytes[..], &position_2_bytes[..],
             &vec![1u8]].concat();
-        self.write_command(Command::MIXEDSPEEDACCELDECCELPOS as u8, &data)
+        self.write_command(Commands::MixDriveSpeedAccelDeccelPosition as u8, &data)
     }
 
     /*
@@ -535,7 +439,7 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
     */
     //bool ReadEncoders(uint8_t address,uint32_t &enc1,uint32_t &enc2);
     pub fn read_encoders(&mut self) -> Result<(u32, u32), std::io::Error> {
-        self.read_command(Command::GETENCODERS as u8, 8)
+        self.read_command(Commands::ReadEncoderCounts as u8, 8)
             .map(|data| {
                 (
                     join_u8_u32(data[0], data[1], data[2], data[3]),
@@ -553,7 +457,7 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
 
     //uint16_t ReadError(uint8_t address,bool *valid=NULL);
     pub fn read_error(&mut self) -> Result<StatusFlags, std::io::Error> {
-        self.read_command(Command::GETERROR as u8, 2)
+        self.read_command(Commands::ReadStatus as u8, 2)
             .map(|data| StatusFlags::from_bits(join_u8(data[0], data[1])).unwrap())
     }
 
@@ -567,7 +471,7 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
     */
     //bool GetConfig(uint8_t address, uint16_t &config);
     pub fn get_config(&mut self) -> Result<ConfigFlags, std::io::Error> {
-        self.read_command(Command::GETCONFIG as u8, 2)
+        self.read_command(Commands::ReadStandardConfigSettings as u8, 2)
             .map(|data| ConfigFlags::from_bits(join_u8(data[0], data[1])).unwrap())
     }
 
