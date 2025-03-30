@@ -202,71 +202,44 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
         self.write_command(Commands::TurnLeftRight as u8, &vec![speed])
     }
 
-    //uint32_t ReadEncM1(uint8_t address, uint8_t *status=NULL,bool *valid=NULL);
     pub fn read_enc_m1(&mut self) -> Result<u32, &str> {
         unimplemented!()
     }
 
-    //uint32_t ReadEncM2(uint8_t address, uint8_t *status=NULL,bool *valid=NULL);
     pub fn read_enc_m2(&mut self) -> Result<u32, &str> {
         unimplemented!()
     }
 
-    //bool SetEncM1(uint8_t address, int32_t val);
     pub fn set_enc_m1(&mut self, _value: i32) -> Result<(), &str> {
         unimplemented!()
     }
 
-    //bool SetEncM2(uint8_t address, int32_t val);
     pub fn set_enc_m2(&mut self, _value: i32) -> Result<(), &str> {
         unimplemented!()
     }
 
-    /*
-    uint32_t ReadSpeedM1(uint8_t address, uint8_t *status=NULL,bool *valid=NULL);
-    uint32_t ReadSpeedM2(uint8_t address, uint8_t *status=NULL,bool *valid=NULL);
-    */
-    //bool ResetEncoders(uint8_t address);
     pub fn reset_encoders(&mut self) -> Result<(), std::io::Error> {
         self.write_simple_command(Commands::ResetEncoders as u8)
     }
 
-    /*
-    bool ReadVersion(uint8_t address,char *version);
-    */
-
-    //uint16_t ReadMainBatteryVoltage(uint8_t address,bool *valid=NULL);
     pub fn read_main_battery_voltage(&mut self) -> Result<f32, std::io::Error> {
         self.read_command(Commands::ReadMainBatVoltage as u8, 2)
             .map(|data| (join_u8(data[0], data[1]) as f32) / 10.0)
     }
 
-    //uint16_t ReadLogicBatteryVoltage(uint8_t address,bool *valid=NULL);
     pub fn read_logic_battery_voltage(&mut self) -> Result<f32, std::io::Error> {
         self.read_command(Commands::ReadLogicBatVoltage as u8, 2)
             .map(|data| (join_u8(data[0], data[1]) as f32) / 10.0)
     }
 
-    /*
-    bool SetMinVoltageLogicBattery(uint8_t address, uint8_t voltage);
-    bool SetMaxVoltageLogicBattery(uint8_t address, uint8_t voltage);
-    bool SetM1VelocityPID(uint8_t address, float Kp, float Ki, float Kd, uint32_t qpps);
-    bool SetM2VelocityPID(uint8_t address, float Kp, float Ki, float Kd, uint32_t qpps);
-    uint32_t ReadISpeedM1(uint8_t address,uint8_t *status=NULL,bool *valid=NULL);
-    uint32_t ReadISpeedM2(uint8_t address,uint8_t *status=NULL,bool *valid=NULL);
-    */
-
-    //bool DutyM1(uint8_t address, uint16_t duty);
     pub fn duty_m1(&mut self, duty: i16) -> std::io::Result<()> {
         self.write_command(Commands::M1DriveSignedDutyCycle as u8, &split_i16_u8(duty).to_vec())
     }
 
-    //bool DutyM2(uint8_t address, uint16_t duty);
     pub fn duty_m2(&mut self, duty: i16) -> std::io::Result<()> {
         self.write_command(Commands::M2DriveSignedDutyCycle as u8, &split_i16_u8(duty).to_vec())
     }
 
-    //bool DutyM1M2(uint8_t address, uint16_t duty1, uint16_t duty2);
     pub fn duty_m1_m2(&mut self, duty1: i16, duty2: i16) -> std::io::Result<()> {
         self.write_command(
             Commands::MixDriveSignedDutyCycle as u8,
@@ -274,25 +247,13 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
         )
     }
 
-    /*
-
-
-    bool SpeedM1(uint8_t address, uint32_t speed);
-    bool SpeedM2(uint8_t address, uint32_t speed);
-    */
-    //bool SpeedM1M2(uint8_t address, uint32_t speed1, uint32_t speed2);
     pub fn speed_m1_m2(&mut self, speed_1: i32, speed_2: i32) -> Result<(), std::io::Error> {
         let speed_1_bytes = split_i32_u8(speed_1);
         let speed_2_bytes = split_i32_u8(speed_2);
         let data = [&speed_1_bytes[..], &speed_2_bytes[..]].concat();
         self.write_command(Commands::MixDriveSignedSpeed as u8, &data)
     }
-    /*
-    bool SpeedAccelM1(uint8_t address, uint32_t accel, uint32_t speed);
-    bool SpeedAccelM2(uint8_t address, uint32_t accel, uint32_t speed);
-    bool SpeedAccelM1M2(uint8_t address, uint32_t accel, uint32_t speed1, uint32_t speed2);
-    */
-    //bool SpeedDistanceM1(uint8_t address, uint32_t speed, uint32_t distance, uint8_t flag=0);
+    
     pub fn speed_distance_m1(&mut self, speed: i32, distance: u32) -> Result<(), std::io::Error> {
         let speed_bytes = split_i32_u8(speed);
         let distance_bytes = split_u32_u8(distance);
@@ -300,8 +261,6 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
         self.write_command(Commands::M1DriveSignedSpeedDistanceBuffered as u8, &data)
     }
 
-
-    //bool SpeedDistanceM2(uint8_t address, uint32_t speed, uint32_t distance, uint8_t flag=0);
     pub fn speed_distance_m2(&mut self, speed: i32, distance: u32) -> Result<(), std::io::Error> {
         let speed_bytes = split_i32_u8(speed);
         let distance_bytes = split_u32_u8(distance);
@@ -309,7 +268,6 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
         self.write_command(Commands::M2DriveSignedSpeedDistanceBuffered as u8, &data)
     }
 
-    //bool SpeedDistanceM1M2(uint8_t address, uint32_t speed1, uint32_t distance1, uint32_t speed2, uint32_t distance2, uint8_t flag=0);
     pub fn speed_distance_m1_m2(&mut self, speed_1: i32, distance_1: u32, speed_2: i32, distance_2: u32) -> Result<(), std::io::Error> {
         let speed_1_bytes = split_i32_u8(speed_1);
         let distance_1_bytes = split_u32_u8(distance_1);
@@ -319,12 +277,6 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
         self.write_command(Commands::MixDriveSignedSpeedDistanceBuffered as u8, &data)
     }
 
-    /*
-    bool SpeedAccelDistanceM1(uint8_t address, uint32_t accel, uint32_t speed, uint32_t distance, uint8_t flag=0);
-    bool SpeedAccelDistanceM2(uint8_t address, uint32_t accel, uint32_t speed, uint32_t distance, uint8_t flag=0);
-    */
-
-    //bool SpeedAccelDistanceM1M2(uint8_t address, uint32_t accel, uint32_t speed1, uint32_t distance1, uint32_t speed2, uint32_t distance2, uint8_t flag=0);
     pub fn speed_accel_distance_m1_m2(&mut self, accel: u32, speed_1: i32, distance_1: u32, speed_2: i32, distance_2: u32) -> Result<(), std::io::Error> {
         let accel_bytes = split_u32_u8(accel);
         let speed_1_bytes = split_i32_u8(speed_1);
@@ -335,7 +287,6 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
         self.write_command(Commands::MixDriveSignedSpeedAccelDistanceBuffered as u8, &data)
     }
 
-    //bool ReadBuffers(uint8_t address, uint8_t &depth1, uint8_t &depth2);
     pub fn read_buffers(&mut self) -> std::io::Result<(BufferStatus, BufferStatus)> {
         self.read_command(Commands::ReadBufferLength as u8, 2)
             .map(|data|
@@ -351,21 +302,6 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
             })
         )
     }
-    /*
-    bool ReadPWMs(uint8_t address, int16_t &pwm1, int16_t &pwm2);
-    bool ReadCurrents(uint8_t address, int16_t &current1, int16_t &current2);
-    bool SpeedAccelM1M2_2(uint8_t address, uint32_t accel1, uint32_t speed1, uint32_t accel2, uint32_t speed2);
-    bool SpeedAccelDistanceM1M2_2(uint8_t address, uint32_t accel1, uint32_t speed1, uint32_t distance1, uint32_t accel2, uint32_t speed2, uint32_t distance2, uint8_t flag=0);
-    bool DutyAccelM1(uint8_t address, uint16_t duty, uint32_t accel);
-    bool DutyAccelM2(uint8_t address, uint16_t duty, uint32_t accel);
-    bool DutyAccelM1M2(uint8_t address, uint16_t duty1, uint32_t accel1, uint16_t duty2, uint32_t accel2);
-    bool ReadM1VelocityPID(uint8_t address,float &Kp_fp,float &Ki_fp,float &Kd_fp,uint32_t &qpps);
-    bool ReadM2VelocityPID(uint8_t address,float &Kp_fp,float &Ki_fp,float &Kd_fp,uint32_t &qpps);
-    bool SetMainVoltages(uint8_t address,uint16_t min,uint16_t max);
-    bool SetLogicVoltages(uint8_t address,uint16_t min,uint16_t max);
-    */
-
-    //bool ReadMinMaxMainVoltages(uint8_t address,uint16_t &min,uint16_t &max);
 
     pub fn read_min_max_main_voltages(&mut self) -> Result<(f32, f32), std::io::Error> {
         self.read_command(Commands::ReadMainBatVoltageSettings as u8, 4)
@@ -377,16 +313,6 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
             })
     }
 
-    /*
-    bool ReadMinMaxLogicVoltages(uint8_t address,uint16_t &min,uint16_t &max);
-    bool SetM1PositionPID(uint8_t address,float kp,float ki,float kd,uint32_t kiMax,uint32_t deadzone,uint32_t min,uint32_t max);
-    bool SetM2PositionPID(uint8_t address,float kp,float ki,float kd,uint32_t kiMax,uint32_t deadzone,uint32_t min,uint32_t max);
-    bool ReadM1PositionPID(uint8_t address,float &Kp,float &Ki,float &Kd,uint32_t &KiMax,uint32_t &DeadZone,uint32_t &Min,uint32_t &Max);
-    bool ReadM2PositionPID(uint8_t address,float &Kp,float &Ki,float &Kd,uint32_t &KiMax,uint32_t &DeadZone,uint32_t &Min,uint32_t &Max);
-    bool SpeedAccelDeccelPositionM1(uint8_t address,uint32_t accel,uint32_t speed,uint32_t deccel,uint32_t position,uint8_t flag);
-    bool SpeedAccelDeccelPositionM2(uint8_t address,uint32_t accel,uint32_t speed,uint32_t deccel,uint32_t position,uint8_t flag);
-    */
-    //bool SpeedAccelDeccelPositionM1M2(uint8_t address,uint32_t accel1,uint32_t speed1,uint32_t deccel1,uint32_t position1,uint32_t accel2,uint32_t speed2,uint32_t deccel2,uint32_t position2,uint8_t flag);
     pub fn speed_accel_deccel_position_m1_m2(&mut self,
         accel_1: u32, speed_1: i32, deccel_1: u32, position_1: u32,
         accel_2: u32, speed_2: i32, deccel_2: u32, position_2: u32) -> Result<(), std::io::Error> {
@@ -407,15 +333,6 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
         self.write_command(Commands::MixDriveSpeedAccelDeccelPosition as u8, &data)
     }
 
-    /*
-    bool SetM1DefaultAccel(uint8_t address, uint32_t accel);
-    bool SetM2DefaultAccel(uint8_t address, uint32_t accel);
-    bool SetPinFunctions(uint8_t address, uint8_t S3mode, uint8_t S4mode, uint8_t S5mode);
-    bool GetPinFunctions(uint8_t address, uint8_t &S3mode, uint8_t &S4mode, uint8_t &S5mode);
-    bool SetDeadBand(uint8_t address, uint8_t Min, uint8_t Max);
-    bool GetDeadBand(uint8_t address, uint8_t &Min, uint8_t &Max);
-    */
-    //bool ReadEncoders(uint8_t address,uint32_t &enc1,uint32_t &enc2);
     pub fn read_encoders(&mut self) -> Result<(u32, u32), std::io::Error> {
         self.read_command(Commands::ReadEncoderCounts as u8, 8)
             .map(|data| {
@@ -426,39 +343,13 @@ impl <S: SerialPort + Sized> Roboclaw<S> {
             })
     }
 
-    /*
-    bool ReadISpeeds(uint8_t address,uint32_t &ispeed1,uint32_t &ispeed2);
-    bool RestoreDefaults(uint8_t address);
-    bool ReadTemp(uint8_t address, uint16_t &temp);
-    bool ReadTemp2(uint8_t address, uint16_t &temp);
-    */
-
-    //uint16_t ReadError(uint8_t address,bool *valid=NULL);
     pub fn read_error(&mut self) -> Result<StatusFlags, std::io::Error> {
         self.read_command(Commands::ReadStatus as u8, 2)
             .map(|data| StatusFlags::from_bits(join_u8(data[0], data[1])).unwrap())
     }
 
-    /*
-    bool ReadEncoderModes(uint8_t address, uint8_t &M1mode, uint8_t &M2mode);
-    bool SetM1EncoderMode(uint8_t address,uint8_t mode);
-    bool SetM2EncoderMode(uint8_t address,uint8_t mode);
-    bool WriteNVM(uint8_t address);
-    bool ReadNVM(uint8_t address);
-    bool SetConfig(uint8_t address, uint16_t config);
-    */
-    //bool GetConfig(uint8_t address, uint16_t &config);
     pub fn get_config(&mut self) -> Result<ConfigFlags, std::io::Error> {
         self.read_command(Commands::ReadStandardConfigSettings as u8, 2)
             .map(|data| ConfigFlags::from_bits(join_u8(data[0], data[1])).unwrap())
     }
-
-    /*
-    bool SetM1MaxCurrent(uint8_t address,uint32_t max);
-    bool SetM2MaxCurrent(uint8_t address,uint32_t max);
-    bool ReadM1MaxCurrent(uint8_t address,uint32_t &max);
-    bool ReadM2MaxCurrent(uint8_t address,uint32_t &max);
-    bool SetPWMMode(uint8_t address, uint8_t mode);
-    bool GetPWMMode(uint8_t address, uint8_t &mode);
-    */
 }
