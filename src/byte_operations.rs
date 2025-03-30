@@ -1,3 +1,9 @@
+//! This module provides functions for splitting and joining integers into bytes
+//! 
+//! It includes utilities to split 16-bit and 32-bit signed/unsigned integers into
+//! 8-bit byte arrays, and to join multiple 8-bit bytes back into 16-bit or 32-bit
+//! unsigned integers.
+
 /// Splits an unsigned 16-bit integer into 2 unsigned 8-bit integers
 pub fn split_u16_u8(x: u16) -> [u8; 2] {
     [(x >> 8) as u8, x as u8]

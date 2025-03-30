@@ -1,3 +1,12 @@
+//! This module defines the `Commands` enum, which represents a set of commands for
+//! communicating with the RoboClaw motor controller. Each command corresponds to a specific
+//! action or query, such as motor control, encoder reading, voltage settings, and configuration
+//! management. The commands are encoded as `u8` values for efficient transmission over a serial
+//! communication protocol.
+//!
+//! These commands are used internally to send instructions to the RoboClaw controller, and each
+//! variant in the `Commands` enum maps to a specific function or operation of the controller.
+
 #[allow(dead_code)]
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

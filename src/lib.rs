@@ -1,5 +1,5 @@
-pub mod commands;
-pub mod byte_operations;
+mod commands;
+mod byte_operations;
 
 use serial::prelude::*;
 use crc16;
