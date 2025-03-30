@@ -5,7 +5,7 @@ use serial::prelude::*;
 use crc16;
 use bitflags::bitflags;
 use commands::Commands;
-use byte_operations::{split_i16_u8, split_u16_u8, split_i32_u8, split_u32_u8, join_u8, join_u8_u32};
+use byte_operations::*;
 
 bitflags! {
     pub struct ConfigFlags: u16 {
