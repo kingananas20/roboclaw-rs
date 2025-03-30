@@ -1,5 +1,6 @@
 mod byte_operations;
 mod commands;
+mod connection;
 
 use bitflags::bitflags;
 use byte_operations::*;
