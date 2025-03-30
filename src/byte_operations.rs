@@ -1,5 +1,5 @@
 //! This module provides functions for splitting and joining integers into bytes
-//! 
+//!
 //! It includes utilities to split 16-bit and 32-bit signed/unsigned integers into
 //! 8-bit byte arrays, and to join multiple 8-bit bytes back into 16-bit or 32-bit
 //! unsigned integers.
