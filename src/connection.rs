@@ -1,7 +1,6 @@
 //! This module handles the serial connection between the controller and
 //! the RoboClaw.
 
-use crate::byte_operations::*;
 use crate::Commands;
 use crc16::{State, XMODEM};
 use serialport::{ClearBuffer, SerialPort};
@@ -82,5 +81,48 @@ impl Connection {
         }
 
         false
+    }
+
+    pub fn read<const N: usize>(&mut self, command: Commands, how: &[u8; N]) -> [u32; N] {
+        for _ in 0..self.tries {
+            self.reset_connection();
+            self.send_command(command);
+
+            let mut data = [0u32; N];
+            for (i, &byte_size) in how.iter().enumerate() {
+                data[i] = match byte_size {
+                    1 => {
+                        let mut buffer = [0u8; 1];
+                        let _ = self.port.read_exact(&mut buffer);
+                        self.crc.update(&buffer);
+                        buffer[0] as u32
+                    }
+                    2 => {
+                        let mut buffer = [0u8; 2];
+                        let _ = self.port.read_exact(&mut buffer);
+                        self.crc.update(&buffer);
+                        u16::from_be_bytes(buffer) as u32
+                    }
+                    4 => {
+                        let mut buffer = [0u8; 4];
+                        let _ = self.port.read_exact(&mut buffer);
+                        self.crc.update(&buffer);
+                        u32::from_be_bytes(buffer)
+                    }
+                    _ => panic!(
+                        "value cannot be {}!!\nonly values 1, 2 and 4 are allowd",
+                        byte_size
+                    ),
+                };
+            }
+
+            let mut crc = [0u8; 2];
+            let _ = self.port.read_exact(&mut crc);
+            if self.crc.get().to_be_bytes() == crc {
+                return data;
+            }
+        }
+
+        [0; N]
     }
 }
