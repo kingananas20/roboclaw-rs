@@ -5,15 +5,18 @@ use crate::Commands;
 use crc16::{State, XMODEM};
 use serialport::{ClearBuffer, SerialPort};
 
+/// Represents the serial connection to the RoboClaw motor controller.
 pub struct Connection {
-    port: Box<dyn SerialPort>,
-    pub address: u8,
-    tries: u8,
-    crc: State<XMODEM>,
-    buffer: Vec<u8>,
+    port: Box<dyn SerialPort>, // The serial port for commjnication
+    pub address: u8,           // The address of the RoboClaw device
+    tries: u8,                 // Number of attempts to retry a failed operation
+    crc: State<XMODEM>,        // CRC16 XMODEM state for the checksum calculation
+    buffer: Vec<u8>,           // Buffer holding the data to be sent
 }
 
 impl Connection {
+    /// Creates a new `Connection` instance with the specified parameters.
+    /// Initializes the CRC State and prepares the buffer for communication.
     pub fn new(self, port: Box<dyn SerialPort>, address: u8, tries: u8) -> Self {
         let crc = self.initialize_crc();
         let buffer = Vec::new();
@@ -26,24 +29,26 @@ impl Connection {
         }
     }
 
-    /// initializes a new State for CRC16 XMODEM
+    /// Initializes a new CRC16 XMODEM state.
     fn initialize_crc(&self) -> State<XMODEM> {
         State::<XMODEM>::new()
     }
 
-    /// clears the input buffer of the connectio
+    /// Resets the connection by clearing the buffer and CRC state.
     fn reset_connection(&mut self) {
         let _ = self.port.clear(ClearBuffer::All);
         self.crc = self.initialize_crc();
         self.buffer.clear();
     }
 
-    /// sends the address and command and updates the crc
+    /// Sends the address and command to the motor controller, updating the CRC
     fn send_command(&mut self, command: Commands) {
         self.crc.update(&[self.address, command as u8]);
         self.buffer.extend(&[self.address, command as u8]);
     }
 
+    /// Writes the specified command and values to the RoboClaw.
+    /// Attempts multiple retries on failure. Returns `true` if successful.
     pub fn write(&mut self, command: Commands, values: &[u32]) -> bool {
         for _ in 0..self.tries {
             self.reset_connection();
@@ -83,6 +88,8 @@ impl Connection {
         false
     }
 
+    /// Reads data from the RoboClaw based on the provided command and expected sizes.
+    /// Returns an array of values read from the device.
     pub fn read<const N: usize>(&mut self, command: Commands, how: &[u8; N]) -> [u32; N] {
         for _ in 0..self.tries {
             self.reset_connection();
@@ -123,6 +130,7 @@ impl Connection {
         [0; N]
     }
 
+    /// Reads a specififc number of bytes from the serialport and updates the CRC state.
     fn read_bytes(&mut self, buffer: &mut [u8]) {
         let _ = self.port.read_exact(buffer);
         self.crc.update(&buffer);
