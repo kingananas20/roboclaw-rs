@@ -93,20 +93,17 @@ impl Connection {
                 data[i] = match byte_size {
                     1 => {
                         let mut buffer = [0u8; 1];
-                        let _ = self.port.read_exact(&mut buffer);
-                        self.crc.update(&buffer);
+                        self.read_bytes(&mut buffer);
                         buffer[0] as u32
                     }
                     2 => {
                         let mut buffer = [0u8; 2];
-                        let _ = self.port.read_exact(&mut buffer);
-                        self.crc.update(&buffer);
+                        self.read_bytes(&mut buffer);
                         u16::from_be_bytes(buffer) as u32
                     }
                     4 => {
                         let mut buffer = [0u8; 4];
-                        let _ = self.port.read_exact(&mut buffer);
-                        self.crc.update(&buffer);
+                        self.read_bytes(&mut buffer);
                         u32::from_be_bytes(buffer)
                     }
                     _ => panic!(
@@ -124,5 +121,10 @@ impl Connection {
         }
 
         [0; N]
+    }
+
+    fn read_bytes(&mut self, buffer: &mut [u8]) {
+        let _ = self.port.read_exact(buffer);
+        self.crc.update(&buffer);
     }
 }
