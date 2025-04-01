@@ -25,9 +25,9 @@ impl From<serialport::Error> for ConnectionError {
 }
 
 /// Represents the serial connection to the RoboClaw motor controller.
-pub struct Connection {
+pub(crate) struct Connection {
     port: Box<dyn SerialPort>, // The serial port for commjnication
-    pub address: u8,           // The address of the RoboClaw device
+    pub(crate) address: u8,    // The address of the RoboClaw device
     tries: u8,                 // Number of attempts to retry a failed operation
     crc: State<XMODEM>,        // CRC16 XMODEM state for the checksum calculation
     buffer: Vec<u8>,           // Buffer holding the data to be sent
@@ -36,7 +36,7 @@ pub struct Connection {
 impl Connection {
     /// Creates a new `Connection` instance with the specified parameters.
     /// Initializes the CRC State and prepares the buffer for communication.
-    pub fn new(self, port: Box<dyn SerialPort>, address: u8, tries: u8) -> Self {
+    pub(crate) fn new(self, port: Box<dyn SerialPort>, address: u8, tries: u8) -> Self {
         let crc = self.initialize_crc();
         let buffer = Vec::new();
         Connection {
@@ -69,7 +69,11 @@ impl Connection {
 
     /// Writes the specified command and values to the RoboClaw.
     /// Attempts multiple retries on failure. Returns `true` if successful.
-    pub fn write(&mut self, command: Commands, values: &[u32]) -> Result<bool, ConnectionError> {
+    pub(crate) fn write(
+        &mut self,
+        command: Commands,
+        values: &[u32],
+    ) -> Result<bool, ConnectionError> {
         for _ in 0..self.tries {
             self.reset_connection()?;
             self.send_command(command);
@@ -112,7 +116,7 @@ impl Connection {
 
     /// Reads data from the RoboClaw based on the provided command and expected sizes.
     /// Returns an array of values read from the device.
-    pub fn read<const N: usize>(
+    pub(crate) fn read<const N: usize>(
         &mut self,
         command: Commands,
         how: &[u8; N],
