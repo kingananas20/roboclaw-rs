@@ -5,6 +5,25 @@ use crate::Commands;
 use crc16::{State, XMODEM};
 use serialport::{ClearBuffer, SerialPort};
 
+pub enum ConnectionError {
+    Io(std::io::Error),
+    Serial(serialport::Error),
+    InvalidByteSize(u8),
+    CRCMismatch,
+}
+
+impl From<std::io::Error> for ConnectionError {
+    fn from(err: std::io::Error) -> Self {
+        ConnectionError::Io(err)
+    }
+}
+
+impl From<serialport::Error> for ConnectionError {
+    fn from(err: serialport::Error) -> Self {
+        ConnectionError::Serial(err)
+    }
+}
+
 /// Represents the serial connection to the RoboClaw motor controller.
 pub struct Connection {
     port: Box<dyn SerialPort>, // The serial port for commjnication
@@ -35,10 +54,11 @@ impl Connection {
     }
 
     /// Resets the connection by clearing the buffer and CRC state.
-    fn reset_connection(&mut self) {
-        let _ = self.port.clear(ClearBuffer::All);
+    fn reset_connection(&mut self) -> Result<(), ConnectionError> {
+        self.port.clear(ClearBuffer::All)?;
         self.crc = self.initialize_crc();
         self.buffer.clear();
+        Ok(())
     }
 
     /// Sends the address and command to the motor controller, updating the CRC
@@ -49,9 +69,9 @@ impl Connection {
 
     /// Writes the specified command and values to the RoboClaw.
     /// Attempts multiple retries on failure. Returns `true` if successful.
-    pub fn write(&mut self, command: Commands, values: &[u32]) -> bool {
+    pub fn write(&mut self, command: Commands, values: &[u32]) -> Result<bool, ConnectionError> {
         for _ in 0..self.tries {
-            self.reset_connection();
+            self.reset_connection()?;
             self.send_command(command);
 
             for &val in values {
@@ -74,25 +94,31 @@ impl Connection {
             let crc_bytes = self.crc.get().to_be_bytes();
             self.buffer.extend_from_slice(&crc_bytes);
 
-            let _ = self.port.write_all(&self.buffer);
+            self.port.write_all(&self.buffer)?;
 
             let mut ack = [0u8; 1];
-            let success: bool = match self.port.read_exact(&mut ack) {
-                Ok(_) => ack[0] == 0xFF,
-                Err(_) => false,
+            self.port.read_exact(&mut ack)?;
+            let success: bool = match ack[0] {
+                0xFF => true,
+                _ => false,
             };
-
-            return success;
+            if success {
+                return Ok(true);
+            }
         }
 
-        false
+        Err(ConnectionError::CRCMismatch)
     }
 
     /// Reads data from the RoboClaw based on the provided command and expected sizes.
     /// Returns an array of values read from the device.
-    pub fn read<const N: usize>(&mut self, command: Commands, how: &[u8; N]) -> [u32; N] {
+    pub fn read<const N: usize>(
+        &mut self,
+        command: Commands,
+        how: &[u8; N],
+    ) -> Result<[u32; N], ConnectionError> {
         for _ in 0..self.tries {
-            self.reset_connection();
+            self.reset_connection()?;
             self.send_command(command);
 
             let mut data = [0u32; N];
@@ -100,39 +126,37 @@ impl Connection {
                 data[i] = match byte_size {
                     1 => {
                         let mut buffer = [0u8; 1];
-                        self.read_bytes(&mut buffer);
+                        self.read_bytes(&mut buffer)?;
                         buffer[0] as u32
                     }
                     2 => {
                         let mut buffer = [0u8; 2];
-                        self.read_bytes(&mut buffer);
+                        self.read_bytes(&mut buffer)?;
                         u16::from_be_bytes(buffer) as u32
                     }
                     4 => {
                         let mut buffer = [0u8; 4];
-                        self.read_bytes(&mut buffer);
+                        self.read_bytes(&mut buffer)?;
                         u32::from_be_bytes(buffer)
                     }
-                    _ => panic!(
-                        "value cannot be {}!!\nonly values 1, 2 and 4 are allowd",
-                        byte_size
-                    ),
+                    _ => return Err(ConnectionError::InvalidByteSize(byte_size)),
                 };
             }
 
             let mut crc = [0u8; 2];
             let _ = self.port.read_exact(&mut crc);
             if self.crc.get().to_be_bytes() == crc {
-                return data;
+                return Ok(data);
             }
         }
 
-        [0; N]
+        Err(ConnectionError::CRCMismatch)
     }
 
     /// Reads a specififc number of bytes from the serialport and updates the CRC state.
-    fn read_bytes(&mut self, buffer: &mut [u8]) {
-        let _ = self.port.read_exact(buffer);
+    fn read_bytes(&mut self, buffer: &mut [u8]) -> Result<(), ConnectionError> {
+        self.port.read_exact(buffer)?;
         self.crc.update(&buffer);
+        Ok(())
     }
 }
