@@ -1,12 +1,9 @@
-mod byte_operations;
 mod commands;
 pub mod connection;
 
 use bitflags::bitflags;
-use byte_operations::*;
 use commands::Commands;
 use connection::{Connection, ConnectionError};
-use crc16;
 use serialport::SerialPort;
 
 bitflags! {
@@ -78,11 +75,6 @@ pub enum BufferStatus {
     NotEmpty(u8),
     Empty,
     LastCommandExecuting,
-}
-
-fn crc(buf: &Vec<u8>) -> Vec<u8> {
-    let crc = crc16::State::<crc16::XMODEM>::calculate(&buf);
-    split_u16_u8(crc).to_vec()
 }
 
 pub enum RoboClawError {
