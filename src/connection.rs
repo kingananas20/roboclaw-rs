@@ -1,6 +1,8 @@
 //! This module handles the serial connection between the controller and
 //! the RoboClaw.
 
+use std::time::Duration;
+
 use crate::Commands;
 use crc16::{State, XMODEM};
 use serialport::{ClearBuffer, SerialPort};
@@ -36,8 +38,9 @@ pub(crate) struct Connection {
 impl Connection {
     /// Creates a new `Connection` instance with the specified parameters.
     /// Initializes the CRC State and prepares the buffer for communication.
-    pub(crate) fn new(self, port: Box<dyn SerialPort>, address: u8, tries: u8) -> Self {
-        let crc = self.initialize_crc();
+    pub(crate) fn new(mut port: Box<dyn SerialPort>, address: u8, tries: u8) -> Self {
+        port.set_timeout(Duration::from_millis(5)); // making sure that the timeout is under 10 milliseconds
+        let crc = State::<XMODEM>::new();
         let buffer = Vec::new();
         Connection {
             port,
@@ -69,29 +72,32 @@ impl Connection {
 
     /// Writes the specified command and values to the RoboClaw.
     /// Attempts multiple retries on failure. Returns `true` if successful.
-    pub(crate) fn write(
+    pub(crate) fn write<const N: usize>(
         &mut self,
         command: Commands,
-        values: &[u32],
+        values: &[u32; N],
+        byte_sizes: &[u8; N],
     ) -> Result<bool, ConnectionError> {
         for _ in 0..self.tries {
             self.reset_connection()?;
             self.send_command(command);
 
-            for &val in values {
-                match val {
-                    0..=0xFF => {
+            for (i, &byte_size) in byte_sizes.iter().enumerate() {
+                let val = values[i];
+                match byte_size {
+                    1 => {
                         self.crc.update(&[val as u8]);
                         self.buffer.extend_from_slice(&[val as u8]);
                     }
-                    0x100..=0xFFFF => {
+                    2 => {
                         self.crc.update(&(val as u16).to_be_bytes());
                         self.buffer.extend_from_slice(&(val as u16).to_be_bytes());
                     }
-                    _ => {
+                    4 => {
                         self.crc.update(&val.to_be_bytes());
                         self.buffer.extend_from_slice(&val.to_be_bytes());
                     }
+                    _ => return Err(ConnectionError::InvalidByteSize(byte_size)),
                 }
             }
 
@@ -119,14 +125,14 @@ impl Connection {
     pub(crate) fn read<const N: usize>(
         &mut self,
         command: Commands,
-        how: &[u8; N],
+        byte_sizes: &[u8; N],
     ) -> Result<[u32; N], ConnectionError> {
         for _ in 0..self.tries {
             self.reset_connection()?;
             self.send_command(command);
 
             let mut data = [0u32; N];
-            for (i, &byte_size) in how.iter().enumerate() {
+            for (i, &byte_size) in byte_sizes.iter().enumerate() {
                 data[i] = match byte_size {
                     1 => {
                         let mut buffer = [0u8; 1];

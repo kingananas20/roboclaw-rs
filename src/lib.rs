@@ -5,6 +5,7 @@ pub mod connection;
 use bitflags::bitflags;
 use byte_operations::*;
 use commands::Commands;
+use connection::{Connection, ConnectionError};
 use crc16;
 use serialport::SerialPort;
 
@@ -84,78 +85,44 @@ fn crc(buf: &Vec<u8>) -> Vec<u8> {
     split_u16_u8(crc).to_vec()
 }
 
+pub enum RoboClawError {
+    Connection(ConnectionError),
+    Io(std::io::Error),
+}
+
+impl From<ConnectionError> for RoboClawError {
+    fn from(value: ConnectionError) -> Self {
+        RoboClawError::Connection(value)
+    }
+}
+
+impl From<std::io::Error> for RoboClawError {
+    fn from(value: std::io::Error) -> Self {
+        RoboClawError::Io(value)
+    }
+}
+
 pub struct Roboclaw {
-    port: Box<dyn SerialPort>,
-    address: u8,
+    connection: Connection,
 }
 
 impl Roboclaw {
-    pub fn new(port: Box<dyn SerialPort>, address: u8) -> Self {
-        Roboclaw { port, address }
+    pub fn new(port: Box<dyn SerialPort>, address: u8, tries: Option<u8>) -> Self {
+        let tries: u8 = tries.unwrap_or_else(|| 3);
+        let connection: Connection = Connection::new(port, address, tries);
+        Roboclaw { connection }
     }
 
-    fn read_command(
-        &mut self,
-        command_code: Commands,
-        num_bytes: usize,
-    ) -> std::io::Result<Vec<u8>> {
-        const CRC_SIZE: usize = 2;
-        let command = vec![self.address, command_code as u8];
-        self.port.write(&command[..])?;
-        let mut buf = vec![0; num_bytes + CRC_SIZE];
-        self.port.read(&mut buf)?;
-        let crc = buf.split_off(num_bytes);
-        let crc_read = join_u8(crc[0], crc[1]);
-        let crc_calc = crc16::State::<crc16::XMODEM>::calculate(&[&command[..], &buf].concat());
-        if crc_read == crc_calc {
-            Ok(buf)
-        } else {
-            Err(std::io::Error::new(std::io::ErrorKind::Other, "crc error"))
-        }
+    pub fn forward_m1(&mut self, speed: u8) -> Result<bool, RoboClawError> {
+        Ok(self
+            .connection
+            .write(Commands::M1Forward, &[speed as u32], &[1])?)
     }
 
-    fn write_simple_command(&mut self, command_code: Commands) -> std::io::Result<()> {
-        let command = vec![self.address, command_code as u8];
-        let crc = crc(&command);
-        let command_bytes = [&[self.address], &command[..], &crc[..]].concat();
-        self.port.write(&command_bytes)?;
-        let mut buf = vec![0; 1];
-        self.port.read(&mut buf)?;
-        if buf[0] == 0xFF {
-            Ok(())
-        } else {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "return value error",
-            ))
-        }
-    }
-
-    fn write_command(&mut self, command_code: Commands, data: &Vec<u8>) -> std::io::Result<()> {
-        let mut command = vec![self.address, command_code as u8];
-        let mut data_copy = data.clone();
-        command.append(&mut data_copy);
-        let crc = crc(&command);
-        let command_bytes = [&[self.address], &command[..], &crc[..]].concat();
-        self.port.write(&command_bytes)?;
-        let mut buf = vec![0; 1];
-        self.port.read(&mut buf)?;
-        if buf[0] == 0xFF {
-            Ok(())
-        } else {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "return value error",
-            ))
-        }
-    }
-
-    pub fn forward_m1(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Commands::M1Forward, &vec![speed])
-    }
-
-    pub fn backward_m1(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Commands::M1Backward, &vec![speed])
+    pub fn backward_m1(&mut self, speed: u8) -> Result<bool, RoboClawError> {
+        Ok(self
+            .connection
+            .write(Commands::M1Backward, &[speed as u32], &[1])?)
     }
 
     pub fn set_min_voltage_main_battery(_voltage: u8) {
@@ -166,44 +133,64 @@ impl Roboclaw {
         unimplemented!()
     }
 
-    pub fn forward_m2(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Commands::M2Forward, &vec![speed])
+    pub fn forward_m2(&mut self, speed: u8) -> Result<bool, RoboClawError> {
+        Ok(self
+            .connection
+            .write(Commands::M2Forward, &[speed as u32], &[1])?)
     }
 
-    pub fn backward_m2(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Commands::M2Backward, &vec![speed])
+    pub fn backward_m2(&mut self, speed: u8) -> Result<bool, RoboClawError> {
+        Ok(self
+            .connection
+            .write(Commands::M2Backward, &[speed as u32], &[1])?)
     }
 
-    pub fn forward_backward_m1(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Commands::M1Drive, &vec![speed])
+    pub fn forward_backward_m1(&mut self, speed: u8) -> Result<bool, RoboClawError> {
+        Ok(self
+            .connection
+            .write(Commands::M1Drive, &[speed as u32], &[1])?)
     }
 
-    pub fn forward_backward_m2(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Commands::M2Drive, &vec![speed])
+    pub fn forward_backward_m2(&mut self, speed: u8) -> Result<bool, RoboClawError> {
+        Ok(self
+            .connection
+            .write(Commands::M2Drive, &[speed as u32], &[1])?)
     }
 
-    pub fn forward_mixed(&mut self, speed: u8) -> Result<(), std::io::Error> {
-        self.write_command(Commands::MixDriveForward, &vec![speed])
+    pub fn forward_mixed(&mut self, speed: u8) -> Result<bool, RoboClawError> {
+        Ok(self
+            .connection
+            .write(Commands::MixDriveForward, &[speed as u32], &[1])?)
     }
 
-    pub fn backward_mixed(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Commands::MixDriveBackward, &vec![speed])
+    pub fn backward_mixed(&mut self, speed: u8) -> Result<bool, RoboClawError> {
+        Ok(self
+            .connection
+            .write(Commands::MixDriveBackward, &[speed as u32], &[1])?)
     }
 
-    pub fn turn_right_mixed(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Commands::MixTurnRight, &vec![speed])
+    pub fn turn_right_mixed(&mut self, speed: u8) -> Result<bool, RoboClawError> {
+        Ok(self
+            .connection
+            .write(Commands::MixTurnRight, &[speed as u32], &[1])?)
     }
 
-    pub fn turn_left_mixed(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Commands::MixTurnLeft, &vec![speed])
+    pub fn turn_left_mixed(&mut self, speed: u8) -> Result<bool, RoboClawError> {
+        Ok(self
+            .connection
+            .write(Commands::MixTurnLeft, &[speed as u32], &[1])?)
     }
 
-    pub fn forward_backward_mixed(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Commands::MixDrive, &vec![speed])
+    pub fn forward_backward_mixed(&mut self, speed: u8) -> Result<bool, RoboClawError> {
+        Ok(self
+            .connection
+            .write(Commands::MixDrive, &[speed as u32], &[1])?)
     }
 
-    pub fn left_right_mixed(&mut self, speed: u8) -> std::io::Result<()> {
-        self.write_command(Commands::TurnLeftRight, &vec![speed])
+    pub fn left_right_mixed(&mut self, speed: u8) -> Result<bool, RoboClawError> {
+        Ok(self
+            .connection
+            .write(Commands::TurnLeftRight, &[speed as u32], &[1])?)
     }
 
     pub fn read_enc_m1(&mut self) -> Result<u32, &str> {
@@ -222,60 +209,70 @@ impl Roboclaw {
         unimplemented!()
     }
 
-    pub fn reset_encoders(&mut self) -> Result<(), std::io::Error> {
-        self.write_simple_command(Commands::ResetEncoders)
+    pub fn reset_encoders(&mut self) -> Result<bool, RoboClawError> {
+        Ok(self.connection.write(Commands::ResetEncoders, &[], &[])?)
     }
 
-    pub fn read_main_battery_voltage(&mut self) -> Result<f32, std::io::Error> {
-        self.read_command(Commands::ReadMainBatVoltage, 2)
-            .map(|data| (join_u8(data[0], data[1]) as f32) / 10.0)
+    pub fn read_main_battery_voltage(&mut self) -> Result<u32, RoboClawError> {
+        Ok(self.connection.read(Commands::ReadMainBatVoltage, &[2])?[0])
     }
 
-    pub fn read_logic_battery_voltage(&mut self) -> Result<f32, std::io::Error> {
-        self.read_command(Commands::ReadLogicBatVoltage, 2)
-            .map(|data| (join_u8(data[0], data[1]) as f32) / 10.0)
+    pub fn read_logic_battery_voltage(&mut self) -> Result<u32, RoboClawError> {
+        Ok(self.connection.read(Commands::ReadLogicBatVoltage, &[2])?[0])
     }
 
-    pub fn duty_m1(&mut self, duty: i16) -> std::io::Result<()> {
-        self.write_command(
-            Commands::M1DriveSignedDutyCycle,
-            &split_i16_u8(duty).to_vec(),
-        )
+    pub fn duty_m1(&mut self, duty: i16) -> Result<bool, RoboClawError> {
+        Ok(self
+            .connection
+            .write(Commands::M1DriveSignedDutyCycle, &[duty as u32], &[2])?)
     }
 
-    pub fn duty_m2(&mut self, duty: i16) -> std::io::Result<()> {
-        self.write_command(
-            Commands::M2DriveSignedDutyCycle,
-            &split_i16_u8(duty).to_vec(),
-        )
+    pub fn duty_m2(&mut self, duty: i16) -> Result<bool, RoboClawError> {
+        Ok(self
+            .connection
+            .write(Commands::M2DriveSignedDutyCycle, &[duty as u32], &[2])?)
     }
 
-    pub fn duty_m1_m2(&mut self, duty1: i16, duty2: i16) -> std::io::Result<()> {
-        self.write_command(
+    pub fn duty_m1_m2(&mut self, duty1: i16, duty2: i16) -> Result<bool, RoboClawError> {
+        Ok(self.connection.write(
             Commands::MixDriveSignedDutyCycle,
-            &[&split_i16_u8(duty1)[..], &split_i16_u8(duty2)[..]].concat(),
-        )
+            &[duty1 as u32, duty2 as u32],
+            &[2, 2],
+        )?)
     }
 
-    pub fn speed_m1_m2(&mut self, speed_1: i32, speed_2: i32) -> Result<(), std::io::Error> {
-        let speed_1_bytes = split_i32_u8(speed_1);
-        let speed_2_bytes = split_i32_u8(speed_2);
-        let data = [&speed_1_bytes[..], &speed_2_bytes[..]].concat();
-        self.write_command(Commands::MixDriveSignedSpeed, &data)
+    pub fn speed_m1_m2(&mut self, speed_1: i32, speed_2: i32) -> Result<bool, RoboClawError> {
+        Ok(self.connection.write(
+            Commands::MixDriveSignedSpeed,
+            &[speed_1 as u32, speed_2 as u32],
+            &[4, 4],
+        )?)
     }
 
-    pub fn speed_distance_m1(&mut self, speed: i32, distance: u32) -> Result<(), std::io::Error> {
-        let speed_bytes = split_i32_u8(speed);
-        let distance_bytes = split_u32_u8(distance);
-        let data = [&speed_bytes[..], &distance_bytes[..], &vec![1u8]].concat();
-        self.write_command(Commands::M1DriveSignedSpeedDistanceBuffered, &data)
+    pub fn speed_distance_m1(
+        &mut self,
+        speed: i32,
+        distance: u32,
+        execute_directly: bool,
+    ) -> Result<bool, RoboClawError> {
+        Ok(self.connection.write(
+            Commands::M1DriveSignedSpeedDistanceBuffered,
+            &[speed as u32, distance as u32, execute_directly as u32],
+            &[4, 4, 1],
+        )?)
     }
 
-    pub fn speed_distance_m2(&mut self, speed: i32, distance: u32) -> Result<(), std::io::Error> {
-        let speed_bytes = split_i32_u8(speed);
-        let distance_bytes = split_u32_u8(distance);
-        let data = [&speed_bytes[..], &distance_bytes[..], &vec![1u8]].concat();
-        self.write_command(Commands::M2DriveSignedSpeedDistanceBuffered, &data)
+    pub fn speed_distance_m2(
+        &mut self,
+        speed: i32,
+        distance: u32,
+        execute_directly: bool,
+    ) -> Result<bool, RoboClawError> {
+        Ok(self.connection.write(
+            Commands::M2DriveSignedSpeedDistanceBuffered,
+            &[speed as u32, distance as u32, execute_directly as u32],
+            &[4, 4, 1],
+        )?)
     }
 
     pub fn speed_distance_m1_m2(
@@ -284,20 +281,19 @@ impl Roboclaw {
         distance_1: u32,
         speed_2: i32,
         distance_2: u32,
-    ) -> Result<(), std::io::Error> {
-        let speed_1_bytes = split_i32_u8(speed_1);
-        let distance_1_bytes = split_u32_u8(distance_1);
-        let speed_2_bytes = split_i32_u8(speed_2);
-        let distance_2_bytes = split_u32_u8(distance_2);
-        let data = [
-            &speed_1_bytes[..],
-            &distance_1_bytes[..],
-            &speed_2_bytes[..],
-            &distance_2_bytes[..],
-            &vec![1u8],
-        ]
-        .concat();
-        self.write_command(Commands::MixDriveSignedSpeedDistanceBuffered, &data)
+        execute_directly: bool,
+    ) -> Result<bool, RoboClawError> {
+        Ok(self.connection.write(
+            Commands::MixDriveSignedSpeedDistanceBuffered,
+            &[
+                speed_1 as u32,
+                distance_1 as u32,
+                speed_2 as u32,
+                distance_2 as u32,
+                execute_directly as u32,
+            ],
+            &[4, 4, 4, 4, 1],
+        )?)
     }
 
     pub fn speed_accel_distance_m1_m2(
@@ -307,50 +303,35 @@ impl Roboclaw {
         distance_1: u32,
         speed_2: i32,
         distance_2: u32,
-    ) -> Result<(), std::io::Error> {
-        let accel_bytes = split_u32_u8(accel);
-        let speed_1_bytes = split_i32_u8(speed_1);
-        let distance_1_bytes = split_u32_u8(distance_1);
-        let speed_2_bytes = split_i32_u8(speed_2);
-        let distance_2_bytes = split_u32_u8(distance_2);
-        let data = [
-            &accel_bytes[..],
-            &speed_1_bytes[..],
-            &distance_1_bytes[..],
-            &speed_2_bytes[..],
-            &distance_2_bytes[..],
-            &vec![1u8],
-        ]
-        .concat();
-        self.write_command(Commands::MixDriveSignedSpeedAccelDistanceBuffered, &data)
+        execute_directly: bool,
+    ) -> Result<bool, RoboClawError> {
+        Ok(self.connection.write(
+            Commands::MixDriveSignedSpeedAccelDistanceBuffered,
+            &[
+                accel as u32,
+                speed_1 as u32,
+                distance_1 as u32,
+                speed_2 as u32,
+                distance_2 as u32,
+                execute_directly as u32,
+            ],
+            &[4, 4, 4, 4, 4, 1],
+        )?)
     }
 
-    pub fn read_buffers(&mut self) -> std::io::Result<(BufferStatus, BufferStatus)> {
-        self.read_command(Commands::ReadBufferLength, 2)
-            .map(|data| {
-                (
-                    match data[0] {
-                        0x0 => BufferStatus::LastCommandExecuting,
-                        0x80 => BufferStatus::Empty,
-                        num => BufferStatus::NotEmpty(num),
-                    },
-                    match data[1] {
-                        0x0 => BufferStatus::LastCommandExecuting,
-                        0x80 => BufferStatus::Empty,
-                        num => BufferStatus::NotEmpty(num),
-                    },
-                )
-            })
+    pub fn read_buffers(&mut self) -> Result<[BufferStatus; 2], RoboClawError> {
+        let values = self.connection.read(Commands::ReadBufferLength, &[1, 1])?;
+        Ok(values.map(|data| match data {
+            0x0 => BufferStatus::LastCommandExecuting,
+            0x80 => BufferStatus::Empty,
+            num => BufferStatus::NotEmpty(num as u8),
+        }))
     }
 
-    pub fn read_min_max_main_voltages(&mut self) -> Result<(f32, f32), std::io::Error> {
-        self.read_command(Commands::ReadMainBatVoltageSettings, 4)
-            .map(|data| {
-                (
-                    join_u8(data[0], data[1]) as f32 / 10.0,
-                    join_u8(data[2], data[3]) as f32 / 10.0,
-                )
-            })
+    pub fn read_min_max_main_voltages(&mut self) -> Result<[u32; 2], RoboClawError> {
+        Ok(self
+            .connection
+            .read(Commands::ReadMainBatVoltageSettings, &[2, 2])?)
     }
 
     pub fn speed_accel_deccel_position_m1_m2(
@@ -363,49 +344,38 @@ impl Roboclaw {
         speed_2: i32,
         deccel_2: u32,
         position_2: u32,
-    ) -> Result<(), std::io::Error> {
-        let accel_1_bytes = split_u32_u8(accel_1);
-        let speed_1_bytes = split_i32_u8(speed_1);
-        let deccel_1_bytes = split_u32_u8(deccel_1);
-        let position_1_bytes = split_u32_u8(position_1);
-
-        let accel_2_bytes = split_u32_u8(accel_2);
-        let speed_2_bytes = split_i32_u8(speed_2);
-        let deccel_2_bytes = split_u32_u8(deccel_2);
-        let position_2_bytes = split_u32_u8(position_2);
-
-        let data = [
-            &accel_1_bytes[..],
-            &speed_1_bytes[..],
-            &deccel_1_bytes[..],
-            &position_1_bytes[..],
-            &accel_2_bytes[..],
-            &speed_2_bytes[..],
-            &deccel_2_bytes[..],
-            &position_2_bytes[..],
-            &vec![1u8],
-        ]
-        .concat();
-        self.write_command(Commands::MixDriveSpeedAccelDeccelPosition, &data)
+        execute_directly: bool,
+    ) -> Result<bool, RoboClawError> {
+        Ok(self.connection.write(
+            Commands::MixDriveSpeedAccelDeccelPosition,
+            &[
+                accel_1 as u32,
+                speed_1 as u32,
+                deccel_1 as u32,
+                position_1 as u32,
+                accel_2 as u32,
+                speed_2 as u32,
+                deccel_2 as u32,
+                position_2 as u32,
+                execute_directly as u32,
+            ],
+            &[4, 4, 4, 4, 4, 4, 4, 4, 1],
+        )?)
     }
 
-    pub fn read_encoders(&mut self) -> Result<(u32, u32), std::io::Error> {
-        self.read_command(Commands::ReadEncoderCounts, 8)
-            .map(|data| {
-                (
-                    join_u8_u32(data[0], data[1], data[2], data[3]),
-                    join_u8_u32(data[4], data[5], data[6], data[7]),
-                )
-            })
+    pub fn read_encoders(&mut self) -> Result<[u32; 2], RoboClawError> {
+        Ok(self.connection.read(Commands::ReadEncoderCounts, &[4, 4])?)
     }
 
-    pub fn read_error(&mut self) -> Result<StatusFlags, std::io::Error> {
-        self.read_command(Commands::ReadStatus, 2)
-            .map(|data| StatusFlags::from_bits(join_u8(data[0], data[1])).unwrap())
+    pub fn read_error(&mut self) -> Result<StatusFlags, RoboClawError> {
+        let value = self.connection.read(Commands::ReadStatus, &[1])?;
+        Ok(value.map(|data| StatusFlags::from_bits(data as u16))[0].unwrap())
     }
 
-    pub fn get_config(&mut self) -> Result<ConfigFlags, std::io::Error> {
-        self.read_command(Commands::ReadStandardConfigSettings, 2)
-            .map(|data| ConfigFlags::from_bits(join_u8(data[0], data[1])).unwrap())
+    pub fn get_config(&mut self) -> Result<ConfigFlags, RoboClawError> {
+        let value = self
+            .connection
+            .read(Commands::ReadStandardConfigSettings, &[1])?;
+        Ok(value.map(|data| ConfigFlags::from_bits(data as u16))[0].unwrap())
     }
 }
