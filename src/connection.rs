@@ -38,17 +38,21 @@ pub(crate) struct Connection {
 impl Connection {
     /// Creates a new `Connection` instance with the specified parameters.
     /// Initializes the CRC State and prepares the buffer for communication.
-    pub(crate) fn new(mut port: Box<dyn SerialPort>, address: u8, tries: u8) -> Self {
-        port.set_timeout(Duration::from_millis(5)); // making sure that the timeout is under 10 milliseconds
+    pub(crate) fn new(
+        mut port: Box<dyn SerialPort>,
+        address: u8,
+        tries: u8,
+    ) -> Result<Self, ConnectionError> {
+        port.set_timeout(Duration::from_millis(5))?; // making sure that the timeout is under 10 milliseconds
         let crc = State::<XMODEM>::new();
         let buffer = Vec::new();
-        Connection {
+        Ok(Connection {
             port,
             address,
             tries,
             crc,
             buffer,
-        }
+        })
     }
 
     /// Initializes a new CRC16 XMODEM state.

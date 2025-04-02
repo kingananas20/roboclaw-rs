@@ -99,10 +99,14 @@ pub struct Roboclaw {
 }
 
 impl Roboclaw {
-    pub fn new(port: Box<dyn SerialPort>, address: u8, tries: Option<u8>) -> Self {
+    pub fn new(
+        port: Box<dyn SerialPort>,
+        address: u8,
+        tries: Option<u8>,
+    ) -> Result<Self, RoboClawError> {
         let tries: u8 = tries.unwrap_or_else(|| 3);
-        let connection: Connection = Connection::new(port, address, tries);
-        Roboclaw { connection }
+        let connection: Connection = Connection::new(port, address, tries)?;
+        Ok(Roboclaw { connection })
     }
 
     pub fn forward_m1(&mut self, speed: u8) -> Result<bool, RoboClawError> {
