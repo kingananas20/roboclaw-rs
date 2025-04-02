@@ -1,30 +1,10 @@
 //! This module handles the serial connection between the controller and
 //! the RoboClaw.
 
-use std::time::Duration;
-
-use crate::Commands;
+use crate::{errors::ConnectionError, Commands};
 use crc16::{State, XMODEM};
 use serialport::{ClearBuffer, SerialPort};
-
-pub enum ConnectionError {
-    Io(std::io::Error),
-    Serial(serialport::Error),
-    InvalidByteSize(u8),
-    CRCMismatch,
-}
-
-impl From<std::io::Error> for ConnectionError {
-    fn from(err: std::io::Error) -> Self {
-        ConnectionError::Io(err)
-    }
-}
-
-impl From<serialport::Error> for ConnectionError {
-    fn from(err: serialport::Error) -> Self {
-        ConnectionError::Serial(err)
-    }
-}
+use std::time::Duration;
 
 /// Represents the serial connection to the RoboClaw motor controller.
 pub(crate) struct Connection {

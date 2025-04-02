@@ -1,9 +1,11 @@
 mod commands;
 pub mod connection;
+pub mod errors;
 
 use bitflags::bitflags;
 use commands::Commands;
-use connection::{Connection, ConnectionError};
+use connection::Connection;
+use errors::RoboClawError;
 use serialport::SerialPort;
 
 bitflags! {
@@ -75,23 +77,6 @@ pub enum BufferStatus {
     NotEmpty(u8),
     Empty,
     LastCommandExecuting,
-}
-
-pub enum RoboClawError {
-    Connection(ConnectionError),
-    Io(std::io::Error),
-}
-
-impl From<ConnectionError> for RoboClawError {
-    fn from(value: ConnectionError) -> Self {
-        RoboClawError::Connection(value)
-    }
-}
-
-impl From<std::io::Error> for RoboClawError {
-    fn from(value: std::io::Error) -> Self {
-        RoboClawError::Io(value)
-    }
 }
 
 pub struct Roboclaw {
