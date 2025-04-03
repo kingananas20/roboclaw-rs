@@ -1,10 +1,12 @@
 mod commands;
-pub mod connection;
+mod connection;
+pub mod datatypes;
 pub mod errors;
 
 use bitflags::bitflags;
 use commands::Commands;
 use connection::Connection;
+use datatypes::BufferStatus;
 use errors::RoboClawError;
 use serialport::SerialPort;
 
@@ -70,13 +72,6 @@ bitflags! {
         const M1_HOME = 0x4000;
         const M2_HOME = 0x8000;
     }
-}
-
-#[derive(PartialEq, Debug)]
-pub enum BufferStatus {
-    NotEmpty(u8),
-    Empty,
-    LastCommandExecuting,
 }
 
 pub struct Roboclaw {
