@@ -4,16 +4,16 @@
 use bitflags::bitflags;
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum MotorsU32 {
-    M1(u32),
-    M2(u32),
+pub struct MotorsU32 {
+    motor_1: u32,
+    motor_2: u32,
 }
 
 /// Enum for storing unsigned 16-bit integers for both motors
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum MotorsU16 {
-    M1(u16),
-    M2(u16),
+pub struct MotorsU16 {
+    motor_1: u16,
+    motor_2: u16,
 }
 
 pub type PWMValues = MotorsU16;
@@ -29,58 +29,59 @@ pub type SpeedErrors = MotorsU32;
 pub type PositionErrors = MotorsU32;
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum Current {
-    Min(u32),
-    Max(u32),
+pub struct Current {
+    min: u32,
+    max: u32,
 }
 
 pub type M1CurrentLimit = Current;
 pub type M2CurrentLimit = Current;
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum BatteryVoltageSetting {
-    Min(u16),
-    Max(u16),
+pub struct BatteryVoltageSetting {
+    min: u16,
+    max: u16,
 }
 
 pub type MainBatteryVoltageSetting = BatteryVoltageSetting;
 pub type LogicBatteryVoltageSetting = BatteryVoltageSetting;
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum BatteryVoltageOffset {
-    MainBatteryOffset(u8),
-    LogicBatteryOffset(u8),
+pub struct BatteryVoltageOffset {
+    main_battery_offset: u8,
+    logic_battery_offset: u8,
+}
+
+// make modes as an enum
+#[derive(PartialEq, Debug, Clone, Copy, Eq)]
+pub struct S345Modes {
+    s3_mode: u8,
+    s4_mode: u8,
+    s5_mode: u8,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum S345Modes {
-    S3Mode(u8),
-    S4Mode(u8),
-    S5Mode(u8),
+pub struct DeadBand {
+    reverse: u8,
+    sforward: u8,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum DeadBand {
-    Reverse(u8),
-    SForward(u8),
+pub struct CTRLModes {
+    ctrl1_mode: u8,
+    ctrl2_mode: u8,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum CTRLModes {
-    CTRL1Mode(u8),
-    CTRL2Mode(u8),
+pub struct CTRL {
+    ctrl1: u8,
+    ctrl2: u8,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum CTRL {
-    CTRL1(u16),
-    CTRL2(u16),
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum Homing {
-    Percentage(u16),
-    Timeout(u32),
+pub struct Homing {
+    percentage: u16,
+    timeout: u16,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
@@ -91,40 +92,40 @@ pub enum BufferStatus {
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum MotorBuffers {
-    M1(BufferStatus),
-    M2(BufferStatus),
+pub struct MotorBuffers {
+    motor_1: BufferStatus,
+    motor_2: BufferStatus,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum PIDQPPS {
-    P(u32),
-    I(u32),
-    D(u32),
-    QPPS(u32),
+pub struct PIDQPPS {
+    proportional: u32,
+    integral: u32,
+    derivative: u32,
+    quadrature_pulses_per_second: u32,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum PositionPIDConst {
-    P(u32),
-    I(u32),
-    D(u32),
-    MaxI(u32),
-    Deadzone(u32),
-    MinPos(u32),
-    MaxPos(u32),
+pub struct PositionPIDConst {
+    proportional: u32,
+    integral: u32,
+    derivative: u32,
+    max_integral: u32,
+    deadzone: u32,
+    min_pos: u32,
+    max_pos: u32,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum Encoders {
-    Enc1(u32),
-    Enc2(u32),
+pub struct Encoders {
+    encoder_1: u32,
+    encoder_2: u32,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq)]
-pub enum EncoderMode {
-    Enc1(u8),
-    Enc2(u8),
+pub struct EncoderMode {
+    encoder_1: u8,
+    encoder_2: u8,
 }
 
 bitflags! {
