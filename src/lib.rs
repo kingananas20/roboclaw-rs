@@ -2,6 +2,7 @@ mod commands;
 mod connection;
 pub mod errors;
 pub mod returntypes;
+pub mod types;
 
 use commands::Commands;
 use connection::Connection;
