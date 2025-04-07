@@ -137,7 +137,7 @@ pub struct InvalidS345Mode {
 impl std::error::Error for InvalidS345Mode {}
 
 impl fmt::Display for InvalidS345Mode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "invalid {} mode: {}", self.mode_type, self.value)
     }
 }

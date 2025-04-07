@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub trait AsInt {
     fn as_u8(self) -> u8;
     fn as_u16(self) -> u16;
